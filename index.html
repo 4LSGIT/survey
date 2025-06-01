@@ -85,6 +85,8 @@
         }
 
         if (data.w) {
+          console.log("Submitting to webhook:", { name, answer });
+
           fetch(data.w, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
