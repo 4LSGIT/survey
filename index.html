@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survey Site</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div id="app" class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <!-- Content will be dynamically inserted here -->
+    </div>
+
+    <script>
+        function parseSurveyParams() {
+            const params = new URLSearchParams(window.location.search);
+            const surveyData = params.get('survey');
+            if (surveyData) {
+                try {
+                    const decoded = atob(decodeURIComponent(surveyData));
+                    const [question, answer, webhook] = decoded.split('|');
+                    return { question, answer, webhook };
+                } catch (e) {
+                    console.error('Invalid survey parameters', e);
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        function createSurveyURL(question, answer, webhook) {
+            const data = [question, answer, webhook].join('|');
+            const encoded = encodeURIComponent(btoa(data));
+            return `${window.location.origin}${window.location.pathname}?survey=${encoded}`;
+        }
+
+        function renderSurveyBuilder() {
+            document.getElementById('app').innerHTML = `
+                <h1 class="text-2xl font-bold mb-4">Create a Survey</h1>
+                <form id="surveyForm" class="space-y-4">
+                    <div>
+                        <label for="question" class="block text-sm font-medium">Question</label>
+                        <input type="text" id="question" class="w-full p-2 border rounded" required>
+                    </div>
+                    <div>
+                        <label for="answer" class="block text-sm font-medium">Correct Answer</label>
+                        <input type="text" id="answer" class="w-full p-2 border rounded" required>
+                    </div>
+                    <div>
+                        <label for="webhook" class="block text-sm font-medium">Webhook URL (Optional)</label>
+                        <input type="url" id="webhook" class="w-full p-2 border rounded">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Create Survey</button>
+                </form>
+                <div id="surveyLink" class="mt-4 hidden">
+                    <p class="text-sm">Survey Link:</p>
+                    <a id="link" class="text-blue-500 underline break-all" target="_blank"></a>
+                </div>
+            `;
+
+            document.getElementById('surveyForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const question = document.getElementById('question').value.trim();
+                const answer = document.getElementById('answer').value.trim();
+                const webhook = document.getElementById('webhook').value.trim();
+                const link = createSurveyURL(question, answer, webhook);
+                const linkElement = document.getElementById('link');
+                linkElement.href = link;
+                linkElement.textContent = link;
+                document.getElementById('surveyLink').classList.remove('hidden');
+            });
+        }
+
+        function renderSurvey(survey) {
+            document.getElementById('app').innerHTML = `
+                <h1 class="text-2xl font-bold mb-4">Survey</h1>
+                <p class="mb-4">${survey.question}</p>
+                <form id="answerForm" class="space-y-4">
+                    <div>
+                        <label for="userAnswer" class="block text-sm font-medium">Your Answer</label>
+                        <input type="text" id="userAnswer" class="w-full p-2 border rounded" required>
+                    </div>
+                    <div>
+                        <label for="name" class="block text-sm font-medium">Your Name</label>
+                        <input type="text" id="name" class="w-full p-2 border rounded" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Submit</button>
+                </form>
+                <div id="result" class="mt-4 hidden"></div>
+            `;
+
+            document.getElementById('answerForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const userAnswer = document.getElementById('userAnswer').value.trim().toLowerCase();
+                const name = document.getElementById('name').value.trim();
+                const resultDiv = document.getElementById('result');
+                
+                if (userAnswer === survey.answer.toLowerCase()) {
+                    resultDiv.innerHTML = `
+                        <p class="text-green-600">Correct! Great job, ${name}!</p>
+                    `;
+                    if (survey.webhook) {
+                        try {
+                            await fetch(survey.webhook, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ name, answer: userAnswer, correct: true })
+                            });
+                        } catch (e) {
+                            console.error('Webhook failed', e);
+                        }
+                    }
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="text-red-600">Not correct, ${name}. Try again?</p>
+                        <button id="tryAgain" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 mr-2">Try Again</button>
+                        <button id="showAnswer" class="bg-gray-500 text-white p-2 rounded hover:bg-gray-600">Show Answer</button>
+                    `;
+                    document.getElementById('tryAgain').addEventListener('click', () => {
+                        document.getElementById('userAnswer').value = '';
+                        resultDiv.classList.add('hidden');
+                    });
+                    document.getElementById('showAnswer').addEventListener('click', () => {
+                        resultDiv.innerHTML = `
+                            <p class="text-gray-600">The correct answer was: ${survey.answer}</p>
+                        `;
+                    });
+                }
+                resultDiv.classList.remove('hidden');
+            });
+        }
+
+        // Initialize
+        const survey = parseSurveyParams();
+        if (survey && survey.question && survey.answer) {
+            renderSurvey(survey);
+        } else {
+            renderSurveyBuilder();
+        }
+    </script>
+</body>
+</html>
