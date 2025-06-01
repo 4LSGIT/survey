@@ -85,11 +85,16 @@
         async function sendWebhook(webhook, data) {
             if (!webhook) return { success: false, message: 'No webhook URL provided' };
             try {
-                const response = await fetch(webhook, {
+                const queryParams = new URLSearchParams({
+                    name: data.name,
+                    answer: data.answer,
+                    ip: data.ip,
+                    correct: data.correct.toString()
+                });
+                const webhookURL = `${webhook}?${queryParams.toString()}`;
+                const response = await fetch(webhookURL, {
                     method: 'POST',
-                    mode: 'cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    mode: 'cors'
                 });
                 if (!response.ok) {
                     throw new Error(`Webhook request failed with status ${response.status}`);
