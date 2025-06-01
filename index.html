@@ -71,6 +71,17 @@
             });
         }
 
+        async function getClientIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip || 'unknown';
+            } catch (e) {
+                console.error('Failed to fetch IP', e);
+                return 'unknown';
+            }
+        }
+
         async function sendWebhook(webhook, data) {
             if (!webhook) return { success: false, message: 'No webhook URL provided' };
             try {
@@ -113,8 +124,15 @@
                 const userAnswer = document.getElementById('userAnswer').value.trim().toLowerCase();
                 const name = document.getElementById('name').value.trim();
                 const resultDiv = document.getElementById('result');
-                
-                const webhookData = { name, answer: userAnswer, correct: userAnswer === survey.answer.toLowerCase() };
+
+                // Fetch IP and send webhook
+                const ip = await getClientIP();
+                const webhookData = {
+                    name: name,
+                    answer: userAnswer,
+                    ip: ip,
+                    correct: userAnswer === survey.answer.toLowerCase()
+                };
                 const webhookResult = await sendWebhook(survey.webhook, webhookData);
 
                 if (userAnswer === survey.answer.toLowerCase()) {
