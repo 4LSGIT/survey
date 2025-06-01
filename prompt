@@ -1,0 +1,9 @@
+
+i want to make a static survey site,
+if there arent url params (or incorrect ones) show the build a survey part
+if there are params decode them and show that "survey"
+the build part contains a textbox for a question and another for an answer (a third for an optional webhook location to send the submission).
+those three things are encoded (something simple but unreadable, maybe b64?) then url encoded and tacked onto the url as a parameter
+if there are the paramaters, decode them and show the "survey" which is a form with a the question, a spot for the answer and a spot for the user to input their name. when they submit if it was the right answer (which was in that url paramaeter) it shows a sucess message, and if it is wrong it shows a not correct message with a button for try again and a button for show answer.
+style it with something like this (done with tailwind):
+https://garlic-counter.glitch.me/
