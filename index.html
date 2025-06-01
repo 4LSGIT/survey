@@ -71,6 +71,25 @@
             });
         }
 
+        async function sendWebhook(webhook, data) {
+            if (!webhook) return { success: false, message: 'No webhook URL provided' };
+            try {
+                const response = await fetch(webhook, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) {
+                    throw new Error(`Webhook request failed with status ${response.status}`);
+                }
+                return { success: true, message: 'Webhook sent successfully' };
+            } catch (e) {
+                console.error('Webhook failed', e);
+                return { success: false, message: `Failed to send webhook: ${e.message}` };
+            }
+        }
+
         function renderSurvey(survey) {
             document.getElementById('app').innerHTML = `
                 <h1 class="text-2xl font-bold mb-4">Survey</h1>
@@ -95,24 +114,18 @@
                 const name = document.getElementById('name').value.trim();
                 const resultDiv = document.getElementById('result');
                 
+                const webhookData = { name, answer: userAnswer, correct: userAnswer === survey.answer.toLowerCase() };
+                const webhookResult = await sendWebhook(survey.webhook, webhookData);
+
                 if (userAnswer === survey.answer.toLowerCase()) {
                     resultDiv.innerHTML = `
                         <p class="text-green-600">Correct! Great job, ${name}!</p>
+                        <p class="text-sm text-gray-600">${webhookResult.success ? 'Submission recorded.' : webhookResult.message}</p>
                     `;
-                    if (survey.webhook) {
-                        try {
-                            await fetch(survey.webhook, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ name, answer: userAnswer, correct: true })
-                            });
-                        } catch (e) {
-                            console.error('Webhook failed', e);
-                        }
-                    }
                 } else {
                     resultDiv.innerHTML = `
                         <p class="text-red-600">Not correct, ${name}. Try again?</p>
+                        <p class="text-sm text-gray-600">${webhookResult.success ? 'Submission recorded.' : webhookResult.message}</p>
                         <button id="tryAgain" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 mr-2">Try Again</button>
                         <button id="showAnswer" class="bg-gray-500 text-white p-2 rounded hover:bg-gray-600">Show Answer</button>
                     `;
@@ -123,6 +136,7 @@
                     document.getElementById('showAnswer').addEventListener('click', () => {
                         resultDiv.innerHTML = `
                             <p class="text-gray-600">The correct answer was: ${survey.answer}</p>
+                            <p class="text-sm text-gray-600">${webhookResult.success ? 'Submission recorded.' : webhookResult.message}</p>
                         `;
                     });
                 }
